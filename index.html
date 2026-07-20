@@ -154,13 +154,21 @@
   .nav-icon-btn:hover { border-color: var(--red); color: var(--red-bright); background: rgba(192,17,10,0.14); }
   .nav-icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
 
+  /* HERO SCROLL TRACK — extra scroll distance that drives the pinned hero animation */
+  .hero-scroll-track {
+    position: relative;
+    height: 230vh;
+  }
+
   /* HERO */
   #hero {
     min-height: 100vh;
+    height: 100vh;
+    position: sticky;
+    top: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
     overflow: hidden;
     text-align: center;
     padding: 6rem 2rem 4rem;
@@ -187,10 +195,38 @@
     pointer-events: none;
   }
 
+  /* Side panels that close in from off-screen as the hero scroll-track advances */
+  .hero-side-panel {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 17vw;
+    min-width: 90px;
+    max-width: 220px;
+    z-index: 3;
+    pointer-events: none;
+    will-change: transform;
+    background:
+      repeating-linear-gradient(180deg, rgba(192,17,10,0.08) 0 2px, transparent 2px 34px),
+      linear-gradient(180deg, var(--surface2), var(--black));
+    border: 1px solid var(--border);
+  }
+  .hero-side-panel.left {
+    left: 0;
+    clip-path: polygon(0 0, 100% 0, 82% 100%, 0 100%);
+    transform: translateX(-100%);
+  }
+  .hero-side-panel.right {
+    right: 0;
+    clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
+    transform: translateX(100%);
+  }
+
   .hero-content {
     position: relative;
     z-index: 2;
     max-width: 800px;
+    will-change: transform, opacity;
   }
 
   .hero-logo {
@@ -204,6 +240,15 @@
     0%, 100% { filter: drop-shadow(0 0 20px rgba(192,17,10,0.4)); }
     50% { filter: drop-shadow(0 0 45px rgba(224,26,16,0.7)); }
   }
+
+  /* Wide key-art image (replaces the small centered logo mark) */
+  .hero-key-art {
+    width: min(640px, 92vw);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    box-shadow: 0 0 60px rgba(192,17,10,0.25);
+  }
+
 
   .hero-eyebrow {
     font-size: 0.72rem;
@@ -320,6 +365,8 @@
   /* LORE */
   #lore {
     background: var(--surface);
+    position: relative;
+    z-index: 4;
   }
 
   .lore-grid {
@@ -683,9 +730,12 @@
     .nav-cta { gap: 0.5rem; margin-left: auto; }
 
     /* HERO */
-    #hero { min-height: 100svh; padding: 5.5rem 1.5rem 5rem; align-items: center; }
+    .hero-scroll-track { height: 200vh; }
+    #hero { min-height: 100svh; height: 100svh; padding: 5.5rem 1.5rem 5rem; align-items: center; }
     .hero-content { width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: center; }
     .hero-logo { width: min(260px, 72vw); margin-bottom: 1.75rem; }
+    .hero-key-art { width: min(400px, 88vw); border-radius: 8px; }
+    .hero-side-panel { width: 10vw; min-width: 32px; }
     .solana-badge { font-size: 0.65rem; padding: 0.28rem 0.65rem; margin-bottom: 1.5rem; }
     .hero-eyebrow { font-size: 0.65rem; letter-spacing: 0.28em; margin-bottom: 0.85rem; }
     .hero-headline { font-size: clamp(1.75rem, 8.5vw, 2.6rem); line-height: 1.1; margin-bottom: 1.1rem; }
@@ -751,6 +801,9 @@
   @media (prefers-reduced-motion: reduce) {
     .fade-in { opacity: 1; transform: none; transition: none; }
     .hero-logo, .claw-img { animation: none; }
+    .hero-scroll-track { height: auto; }
+    #hero { position: relative; }
+    .hero-side-panel { display: none; }
   }
 
   /* FOUNDERS */
@@ -955,7 +1008,8 @@
   </div>
 </nav>
 
-<!-- HERO -->
+<!-- HERO SCROLL TRACK — this extra height is what the pinned hero animation scrolls through -->
+<div class="hero-scroll-track" id="heroScrollTrack">
 <section id="hero">
   <div class="hero-bg"></div>
   <div class="hero-scratches"></div>
@@ -970,12 +1024,14 @@
   <div class="glitch-bar"></div>
   <div class="glitch-bar"></div>
   <div class="glitch-bar"></div>
-  <div class="hero-content">
+  <div class="hero-side-panel left" id="heroPanelL"></div>
+  <div class="hero-side-panel right" id="heroPanelR"></div>
+  <div class="hero-content" id="heroContent">
     <div class="solana-badge">
       <span class="sol-dot"></span>
       On Solana
     </div>
-    <img src="primals-logo.jpg" alt="PRIMALS" class="hero-logo" />
+    <img src="primals-hero-crowd.png" alt="PRIMALS crowd outside the show" class="hero-logo hero-key-art" />
     <p class="hero-eyebrow">A new NFT collection. Coming soon.</p>
     <h1 class="hero-headline">Not fully apes.<br>Not fully human.<br><span>Something else entirely.</span></h1>
     <p class="hero-sub">An ancient species awakens. Evolution is not a destination — it is a reckoning.</p>
@@ -985,8 +1041,8 @@
   <a href="https://primalscopy.netlify.app/primaldash/" target="_blank" class="btn-outline" style="background:#C0110A; color:#fff; border-color:#C0110A;">Play Primal Dash</a>
 </div>
   </div>
-</div>
 </section>
+</div>
 
 <div class="divider"></div>
 
@@ -1195,6 +1251,55 @@ const observer = new IntersectionObserver((entries) => {
 })();
 
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Scroll-pinned hero animation — content scales/lifts and the side panels
+// close in as the hero-scroll-track is scrolled through, then releases
+// naturally into the rest of the page once the track ends.
+(function() {
+  const track = document.getElementById('heroScrollTrack');
+  const heroContent = document.getElementById('heroContent');
+  const panelL = document.getElementById('heroPanelL');
+  const panelR = document.getElementById('heroPanelR');
+  if (!track || !heroContent) return;
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) return;
+
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  let ticking = false;
+
+  function update() {
+    ticking = false;
+    const rect = track.getBoundingClientRect();
+    const total = track.offsetHeight - window.innerHeight;
+    const scrolled = clamp(-rect.top, 0, total);
+    const p = total > 0 ? scrolled / total : 0;
+    // ease in-out
+    const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+
+    const scale = lerp(1, 0.8, e);
+    const translateY = lerp(0, -6, e);
+    heroContent.style.transform = `translateY(${translateY}vh) scale(${scale})`;
+    heroContent.style.opacity = String(lerp(1, 0.35, clamp((e - 0.55) / 0.45, 0, 1)));
+
+    const panelShift = lerp(0, 1, e);
+    panelL.style.transform = `translateX(${lerp(-100, 0, panelShift)}%)`;
+    panelR.style.transform = `translateX(${lerp(100, 0, panelShift)}%)`;
+  }
+
+  function onScroll() {
+    if (!ticking) {
+      window.requestAnimationFrame(update);
+      ticking = true;
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  update();
+})();
 </script>
 
 </body>
