@@ -154,18 +154,10 @@
   .nav-icon-btn:hover { border-color: var(--red); color: var(--red-bright); background: rgba(192,17,10,0.14); }
   .nav-icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
 
-  /* HERO SCROLL TRACK — extra scroll distance that drives the pinned hero animation */
-  .hero-scroll-track {
-    position: relative;
-    height: 230vh;
-  }
-
   /* HERO */
   #hero {
     min-height: 100vh;
-    height: 100vh;
-    position: sticky;
-    top: 0;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -193,33 +185,6 @@
       rgba(192,17,10,0.8) 4px
     );
     pointer-events: none;
-  }
-
-  /* Side panels that close in from off-screen as the hero scroll-track advances */
-  .hero-side-panel {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    width: 17vw;
-    min-width: 90px;
-    max-width: 220px;
-    z-index: 3;
-    pointer-events: none;
-    will-change: transform;
-    background:
-      repeating-linear-gradient(180deg, rgba(192,17,10,0.08) 0 2px, transparent 2px 34px),
-      linear-gradient(180deg, var(--surface2), var(--black));
-    border: 1px solid var(--border);
-  }
-  .hero-side-panel.left {
-    left: 0;
-    clip-path: polygon(0 0, 100% 0, 82% 100%, 0 100%);
-    transform: translateX(-100%);
-  }
-  .hero-side-panel.right {
-    right: 0;
-    clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
-    transform: translateX(100%);
   }
 
   /* POSTER STAGE — the picture as a poster with the wordmark overlapping
@@ -777,12 +742,10 @@
     .nav-cta { gap: 0.5rem; margin-left: auto; }
 
     /* HERO */
-    .hero-scroll-track { height: 200vh; }
-    #hero { min-height: 100svh; height: 100svh; padding: 5.5rem 1.5rem 5rem; align-items: center; }
+    #hero { min-height: 100svh; padding: 5.5rem 1.5rem 5rem; align-items: center; }
     .hero-content { width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: center; }
     .poster-stage { width: min(360px, 88vw); margin-bottom: 1.25rem; }
     .poster-wordmark { top: -10%; }
-    .hero-side-panel { width: 10vw; min-width: 32px; }
     .solana-badge { font-size: 0.65rem; padding: 0.28rem 0.65rem; margin-bottom: 1.5rem; }
     .hero-eyebrow { font-size: 0.65rem; letter-spacing: 0.28em; margin-bottom: 0.85rem; }
     .hero-headline { font-size: clamp(1.75rem, 8.5vw, 2.6rem); line-height: 1.1; margin-bottom: 1.1rem; }
@@ -848,9 +811,6 @@
   @media (prefers-reduced-motion: reduce) {
     .fade-in { opacity: 1; transform: none; transition: none; }
     .poster-image, .claw-img { animation: none; }
-    .hero-scroll-track { height: auto; }
-    #hero { position: relative; }
-    .hero-side-panel { display: none; }
   }
 
   /* FOUNDERS */
@@ -1055,8 +1015,7 @@
   </div>
 </nav>
 
-<!-- HERO SCROLL TRACK — this extra height is what the pinned hero animation scrolls through -->
-<div class="hero-scroll-track" id="heroScrollTrack">
+<!-- HERO -->
 <section id="hero">
   <div class="hero-bg"></div>
   <div class="hero-scratches"></div>
@@ -1071,8 +1030,6 @@
   <div class="glitch-bar"></div>
   <div class="glitch-bar"></div>
   <div class="glitch-bar"></div>
-  <div class="hero-side-panel left" id="heroPanelL"></div>
-  <div class="hero-side-panel right" id="heroPanelR"></div>
   <div class="hero-content" id="heroContent">
     <div class="solana-badge">
       <span class="sol-dot"></span>
@@ -1082,7 +1039,7 @@
       <div class="hero-beam b1"></div>
       <div class="hero-beam b2"></div>
       <div class="poster-wordmark">PRIMALS</div>
-      <img src="primals-hero-crowd.png" alt="PRIMALS crowd outside the show" class="poster-image" />
+      <img src="primals-hero-crowd.png" alt="PRIMALS crowd outside the show" class="poster-image" id="posterImage" />
     </div>
     <p class="hero-eyebrow">A new NFT collection. Coming soon.</p>
     <h1 class="hero-headline">Not fully apes.<br>Not fully human.<br><span>Something else entirely.</span></h1>
@@ -1094,7 +1051,6 @@
 </div>
   </div>
 </section>
-</div>
 
 <div class="divider"></div>
 
@@ -1304,41 +1260,23 @@ const observer = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
-// Scroll-pinned hero animation — content scales/lifts and the side panels
-// close in as the hero-scroll-track is scrolled through, then releases
-// naturally into the rest of the page once the track ends.
+// Hero poster parallax — the poster image drifts downward as the page
+// scrolls (net motion overtakes the normal upward document scroll),
+// while the headline/text below scroll up normally past it.
 (function() {
-  const track = document.getElementById('heroScrollTrack');
-  const heroContent = document.getElementById('heroContent');
-  const panelL = document.getElementById('heroPanelL');
-  const panelR = document.getElementById('heroPanelR');
-  if (!track || !heroContent) return;
+  const poster = document.getElementById('posterImage');
+  if (!poster) return;
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduceMotion) return;
 
-  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
-  const lerp = (a, b, t) => a + (b - a) * t;
-
+  const speed = 1.4; // >1 = image drifts down; <1 = image lags upward; =1 = stays put
   let ticking = false;
 
   function update() {
     ticking = false;
-    const rect = track.getBoundingClientRect();
-    const total = track.offsetHeight - window.innerHeight;
-    const scrolled = clamp(-rect.top, 0, total);
-    const p = total > 0 ? scrolled / total : 0;
-    // ease in-out
-    const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-
-    const scale = lerp(1, 0.8, e);
-    const translateY = lerp(0, -6, e);
-    heroContent.style.transform = `translateY(${translateY}vh) scale(${scale})`;
-    heroContent.style.opacity = String(lerp(1, 0.35, clamp((e - 0.55) / 0.45, 0, 1)));
-
-    const panelShift = lerp(0, 1, e);
-    panelL.style.transform = `translateX(${lerp(-100, 0, panelShift)}%)`;
-    panelR.style.transform = `translateX(${lerp(100, 0, panelShift)}%)`;
+    const offset = window.scrollY * speed;
+    poster.style.transform = `translateY(${offset}px)`;
   }
 
   function onScroll() {
