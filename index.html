@@ -1322,43 +1322,127 @@ const observer = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
-// Poster stage — combines scroll drift (net downward sink, overtaking
-// the page's own upward scroll) with mouse-follow tilt, composed into
-// a single transform each frame so the two effects don't fight.
-// This now targets .poster-stage (the wrapper) rather than the <img>
-// itself, since the <img> already owns the logo-glitch CSS animation —
-// keeping them on separate elements stops the two transforms from
-// overwriting one another.
+// Poster stage — the image genuinely PINS to a fixed spot in the
+// viewport (position: fixed) as soon as the page loads, and holds
+// that spot on screen while you scroll — instead of scrolling away
+// with the rest of the hero. While pinned, it keeps sinking lower on
+// screen as scrollY increases (a slow drift, not a 1:1 follow), and
+// once you scroll far enough to leave the hero section it un-pins
+// and settles into the normal document flow so it scrolls away
+// naturally and never overlaps the sections below.
+//
+// A placeholder element reserves the poster's original box in the
+// flex layout so nothing jumps when the poster becomes `fixed` (which
+// takes it out of flow).
 (function() {
   const stage = document.getElementById('posterStage');
-  if (!stage) return;
+  const hero = document.getElementById('hero');
+  if (!stage || !hero) return;
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
-  if (reduceMotion) return;
 
-  const scrollSpeed = 1.4; // >1 = sinks down; <1 = lags upward; =1 = stays put
-  const tiltMax = 7;       // degrees of max tilt on each axis
+  const sinkSpeed = 0.35;  // fraction of scroll distance the poster drifts down by, while pinned
+  const tiltMax = 7;       // degrees of max mouse-tilt on each axis
 
-  let scrollOffset = 0;
-  let targetTiltX = 0, targetTiltY = 0;
-  let curTiltX = 0, curTiltY = 0;
-  let ticking = false;
+  let placeholder = null;
+  let baseTop = 0, baseLeft = 0, baseWidth = 0, pinLimit = 0;
+  let pinned = false;
+  let reparented = false;
+  let targetTiltX = 0, targetTiltY = 0, curTiltX = 0, curTiltY = 0;
 
-  function composeTransform() {
+  function measure() {
+    const wasPinned = pinned;
+
+    // If already reparented/pinned, briefly drop out of fixed
+    // positioning so getBoundingClientRect reflects a resize correctly.
+    // Since `stage` now lives directly under `#hero` (a flex container),
+    // give it absolute positioning during this readout instead of static,
+    // so it doesn't get shoved sideways by flex layout while we measure.
+    if (reparented) {
+      stage.style.position = 'absolute';
+      stage.style.top = baseTop - window.scrollY + 'px';
+      stage.style.left = baseLeft + 'px';
+      stage.style.width = baseWidth + 'px';
+    } else {
+      // First run: stage is still in its original spot in `.hero-content`,
+      // centered normally — read its true box before touching anything.
+      stage.style.position = '';
+      stage.style.top = '';
+      stage.style.left = '';
+      stage.style.width = '';
+      stage.style.margin = '';
+    }
+
+    const rect = stage.getBoundingClientRect();
+    baseTop = rect.top + window.scrollY;
+    baseLeft = rect.left;
+    baseWidth = rect.width;
+
+    if (!placeholder) {
+      placeholder = document.createElement('div');
+      placeholder.setAttribute('aria-hidden', 'true');
+      stage.parentNode.insertBefore(placeholder, stage);
+    }
+    placeholder.style.width = baseWidth + 'px';
+    placeholder.style.height = rect.height + 'px';
+    placeholder.style.marginBottom = getComputedStyle(stage).marginBottom;
+
+    if (!reparented) {
+      // `.hero-content` has `perspective` set, which makes it act as the
+      // containing block for any `position: fixed` descendant (per the
+      // CSS spec, `perspective`/`transform`/`filter` on an ancestor do
+      // this). That would trap the pin inside `.hero-content`, which
+      // itself scrolls with the page — so the poster would still scroll
+      // away instead of staying fixed to the real viewport. Move it to
+      // be a direct child of `#hero` (which has none of those
+      // properties), now that we already know its correct on-screen box.
+      hero.appendChild(stage);
+      reparented = true;
+    }
+
+    // How far (in px) the poster is allowed to sink before the hero ends.
+    pinLimit = Math.max(0, hero.offsetHeight - rect.height - (baseTop - window.scrollY));
+
+    pin();
+    onScroll();
+  }
+
+  function pin() {
+    pinned = true;
+    placeholder.style.display = 'block';
+    stage.style.position = 'fixed';
+    stage.style.left = baseLeft + 'px';
+    stage.style.width = baseWidth + 'px';
+    stage.style.top = '0px';
+    stage.style.margin = '0';
+  }
+
+  function unpin() {
+    pinned = false;
+    placeholder.style.display = 'none';
+    stage.style.position = 'absolute';
+    stage.style.left = baseLeft + 'px';
+    stage.style.width = baseWidth + 'px';
+    stage.style.top = (baseTop + pinLimit) + 'px';
+    stage.style.margin = '0';
+    stage.style.transform = 'rotateX(0deg) rotateY(0deg)';
+  }
+
+  function composeTransform(sinkY) {
     stage.style.transform =
-      `translateY(${scrollOffset}px) rotateX(${curTiltX}deg) rotateY(${curTiltY}deg)`;
+      `translateY(${sinkY}px) rotateX(${curTiltX}deg) rotateY(${curTiltY}deg)`;
   }
 
   function onScroll() {
-    if (!ticking) {
-      window.requestAnimationFrame(() => {
-        scrollOffset = window.scrollY * scrollSpeed;
-        composeTransform();
-        ticking = false;
-      });
-      ticking = true;
+    const releaseScrollY = pinLimit / sinkSpeed;
+    if (window.scrollY >= releaseScrollY) {
+      if (pinned) unpin();
+      return;
     }
+    if (!pinned) pin();
+    const sinkY = Math.min(window.scrollY * sinkSpeed, pinLimit);
+    composeTransform(sinkY);
   }
 
   function onMouseMove(e) {
@@ -1379,20 +1463,27 @@ document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
   function tiltLoop() {
     curTiltX += (targetTiltX - curTiltX) * 0.1;
     curTiltY += (targetTiltY - curTiltY) * 0.1;
-    composeTransform();
+    if (pinned) {
+      const sinkY = Math.min(window.scrollY * sinkSpeed, pinLimit);
+      composeTransform(sinkY);
+    }
     requestAnimationFrame(tiltLoop);
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll);
+  window.addEventListener('resize', measure);
 
-  if (!isCoarsePointer) {
-    document.getElementById('hero').addEventListener('mousemove', onMouseMove);
-    document.getElementById('hero').addEventListener('mouseleave', onMouseLeave);
+  measure();
+
+  if (!reduceMotion) {
+    if (!isCoarsePointer) {
+      hero.addEventListener('mousemove', onMouseMove);
+      hero.addEventListener('mouseleave', onMouseLeave);
+    }
     requestAnimationFrame(tiltLoop);
+  } else {
+    stage.style.transform = '';
   }
-
-  onScroll();
 })();
 
 // Scramble-decode headline — the final line resolves out of random
