@@ -228,6 +228,9 @@
     position: relative;
     width: min(560px, 90vw);
     margin: 0 auto 1.75rem;
+    display: flex;
+    justify-content: center;
+    perspective: 1000px;
   }
 
   .poster-wordmark {
@@ -251,11 +254,19 @@
   .poster-image {
     position: relative;
     z-index: 1;
-    width: 100%;
     display: block;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    max-height: 38vh;
+    margin: 0 auto;
     border-radius: 8px;
     border: 1px solid var(--border);
     box-shadow: 0 0 70px rgba(192,17,10,0.28);
+    cursor: pointer;
+    transform-style: preserve-3d;
+    will-change: transform, filter;
+    transition: transform 0.15s ease-out, filter 0.15s ease-out, box-shadow 0.15s ease-out;
   }
 
   /* Diagonal light beams crossing behind the poster */
@@ -781,6 +792,7 @@
     #hero { min-height: 100svh; height: 100svh; padding: 5.5rem 1.5rem 5rem; align-items: center; }
     .hero-content { width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: center; }
     .poster-stage { width: min(360px, 88vw); margin-bottom: 1.25rem; }
+    .poster-image { max-height: 30vh; }
     .poster-wordmark { top: -10%; }
     .hero-side-panel { width: 10vw; min-width: 32px; }
     .solana-badge { font-size: 0.65rem; padding: 0.28rem 0.65rem; margin-bottom: 1.5rem; }
@@ -978,9 +990,6 @@
     92% { clip-path: none; transform: translate(0,0); }
     94% { clip-path: inset(60% 0 20% 0); transform: translate(-3px, 1px); }
     95% { clip-path: none; transform: translate(0,0); }
-  }
-  .poster-image {
-    animation: logo-glitch 5s ease-in-out infinite;
   }
   .scanlines {
     position: absolute;
@@ -1351,6 +1360,60 @@ document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
   update();
+})();
+
+// Cursor-reactive poster tilt — the image tilts in perspective toward the
+// cursor and the beams intensify/shift to follow, resetting smoothly on
+// mouse leave. Skipped for touch-only devices and reduced-motion.
+(function() {
+  const stage = document.querySelector('.poster-stage');
+  const img = document.querySelector('.poster-image');
+  const beams = document.querySelectorAll('.poster-stage .hero-beam');
+  if (!stage || !img) return;
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (reduceMotion || !canHover) return;
+
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+  function onMove(e) {
+    const rect = stage.getBoundingClientRect();
+    const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    const y = clamp((e.clientY - rect.top) / rect.height, 0, 1);
+    const nx = x - 0.5; // -0.5 .. 0.5
+    const ny = y - 0.5;
+
+    const maxTilt = 12; // degrees
+    const rotateY = nx * maxTilt * 2;
+    const rotateX = -ny * maxTilt * 2;
+
+    img.style.transform =
+      `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.04,1.04,1.04)`;
+    img.style.boxShadow =
+      `${-nx * 40}px ${-ny * 40}px 90px rgba(192,17,10,0.4)`;
+
+    beams.forEach((beam) => {
+      const base = beam.classList.contains('b1') ? 16 : -14;
+      const dir = base > 0 ? 1 : -1;
+      const shift = nx * 30 * dir;
+      beam.style.opacity = String(0.5 + Math.abs(nx) * 0.3 + Math.abs(ny) * 0.2);
+      beam.style.transform = `rotate(${base}deg) translateX(${shift}px)`;
+    });
+  }
+
+  function onLeave() {
+    img.style.transform = 'perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
+    img.style.boxShadow = '0 0 70px rgba(192,17,10,0.28)';
+    beams.forEach((beam) => {
+      const base = beam.classList.contains('b1') ? 16 : -14;
+      beam.style.opacity = '';
+      beam.style.transform = `rotate(${base}deg)`;
+    });
+  }
+
+  stage.addEventListener('mousemove', onMove);
+  stage.addEventListener('mouseleave', onLeave);
 })();
 </script>
 
