@@ -167,11 +167,11 @@
     position: sticky;
     top: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     overflow: hidden;
     text-align: center;
-    padding: 6rem 2rem 4rem;
+    padding: 8rem 2rem 4rem;
   }
 
   .hero-bg {
@@ -251,6 +251,16 @@
     pointer-events: none;
   }
 
+  .poster-frame {
+    position: relative;
+    z-index: 1;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 0 70px rgba(192,17,10,0.28);
+    overflow: hidden;
+    transition: box-shadow 0.15s ease-out;
+  }
+
   .poster-image {
     position: relative;
     z-index: 1;
@@ -258,13 +268,65 @@
     width: 100%;
     height: auto;
     margin: 0 auto;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    box-shadow: 0 0 70px rgba(192,17,10,0.28);
     cursor: pointer;
     transform-style: preserve-3d;
-    will-change: transform, filter;
-    transition: transform 0.15s ease-out, filter 0.15s ease-out, box-shadow 0.15s ease-out;
+    will-change: transform, filter, clip-path;
+    transition: transform 0.15s ease-out, filter 0.15s ease-out;
+    animation: poster-glitch-main 6.4s ease-in-out infinite;
+  }
+
+  /* Subtle clip-path/filter glitch on the real image — deliberately avoids
+     `transform`, since that property is driven live by the cursor-tilt JS
+     and a CSS animation on the same property would fight it. */
+  @keyframes poster-glitch-main {
+    0%, 91%, 100% { clip-path: none; filter: none; }
+    91.3% { clip-path: inset(25% 0 45% 0); filter: contrast(1.3) saturate(1.4); }
+    91.6% { clip-path: inset(55% 0 15% 0); }
+    92%   { clip-path: none; filter: none; }
+    95.8% { clip-path: inset(10% 0 75% 0); filter: hue-rotate(15deg); }
+    96.2% { clip-path: none; filter: none; }
+  }
+
+  /* Duplicate, color-shifted image layers that briefly slice and offset —
+     the classic RGB-split glitch look. Separate elements so their own
+     transform never conflicts with the tilt effect on .poster-image. */
+  .poster-glitch-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    opacity: 0;
+    mix-blend-mode: screen;
+  }
+  .poster-glitch-layer.layer-r {
+    filter: sepia(1) saturate(6) hue-rotate(-50deg) brightness(1.1);
+    animation: glitch-r 6s steps(1) infinite;
+  }
+  .poster-glitch-layer.layer-b {
+    filter: sepia(1) saturate(6) hue-rotate(160deg) brightness(1.1);
+    animation: glitch-b 7s steps(1) infinite;
+  }
+  @keyframes glitch-r {
+    0%, 91%, 100% { opacity: 0; transform: translate3d(0,0,0); clip-path: inset(0 0 0 0); }
+    91.4% { opacity: 0.55; transform: translate3d(-6px,0,0); clip-path: inset(22% 0 48% 0); }
+    91.8% { opacity: 0.55; transform: translate3d(5px,0,0); clip-path: inset(58% 0 8% 0); }
+    92.2% { opacity: 0; }
+    95.6% { opacity: 0.45; transform: translate3d(4px,0,0); clip-path: inset(6% 0 78% 0); }
+    96%   { opacity: 0; }
+  }
+  @keyframes glitch-b {
+    0%, 90.6%, 100% { opacity: 0; transform: translate3d(0,0,0); clip-path: inset(0 0 0 0); }
+    91%   { opacity: 0.5; transform: translate3d(6px,0,0); clip-path: inset(42% 0 30% 0); }
+    91.4% { opacity: 0.5; transform: translate3d(-5px,0,0); clip-path: inset(4% 0 82% 0); }
+    91.8% { opacity: 0; }
+    96.4% { opacity: 0.4; transform: translate3d(-4px,0,0); clip-path: inset(72% 0 4% 0); }
+    96.8% { opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .poster-image { animation: none; }
+    .poster-glitch-layer { animation: none; display: none; }
   }
 
   /* Diagonal light beams crossing behind the poster */
@@ -787,7 +849,7 @@
 
     /* HERO */
     .hero-scroll-track { height: 200vh; }
-    #hero { min-height: 100svh; height: 100svh; padding: 5.5rem 1.5rem 5rem; align-items: center; }
+    #hero { min-height: 100svh; height: 100svh; padding: 6.5rem 1.5rem 5rem; align-items: flex-start; }
     .hero-content { width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: center; }
     .poster-stage { width: min(360px, 88vw); margin-bottom: 1.25rem; }
     .poster-wordmark { top: -10%; }
@@ -1088,7 +1150,11 @@
       <div class="hero-beam b1"></div>
       <div class="hero-beam b2"></div>
       <div class="poster-wordmark">PRIMALS</div>
-      <img src="primals-hero-crowd.png" alt="PRIMALS crowd outside the show" class="poster-image" />
+      <div class="poster-frame" id="posterFrame">
+        <img src="primals-hero-crowd.png" alt="PRIMALS crowd outside the show" class="poster-image" id="posterImg" />
+        <img src="primals-hero-crowd.png" alt="" aria-hidden="true" class="poster-glitch-layer layer-r">
+        <img src="primals-hero-crowd.png" alt="" aria-hidden="true" class="poster-glitch-layer layer-b">
+      </div>
     </div>
     <p class="hero-eyebrow">A new NFT collection. Coming soon.</p>
     <h1 class="hero-headline">Not fully apes.<br>Not fully human.<br><span>Something else entirely.</span></h1>
@@ -1364,9 +1430,10 @@ document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 // mouse leave. Skipped for touch-only devices and reduced-motion.
 (function() {
   const stage = document.querySelector('.poster-stage');
-  const img = document.querySelector('.poster-image');
+  const frame = document.getElementById('posterFrame');
+  const img = document.getElementById('posterImg');
   const beams = document.querySelectorAll('.poster-stage .hero-beam');
-  if (!stage || !img) return;
+  if (!stage || !frame || !img) return;
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -1387,7 +1454,7 @@ document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
     img.style.transform =
       `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.04,1.04,1.04)`;
-    img.style.boxShadow =
+    frame.style.boxShadow =
       `${-nx * 40}px ${-ny * 40}px 90px rgba(192,17,10,0.4)`;
 
     beams.forEach((beam) => {
@@ -1401,7 +1468,7 @@ document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
   function onLeave() {
     img.style.transform = 'perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
-    img.style.boxShadow = '0 0 70px rgba(192,17,10,0.28)';
+    frame.style.boxShadow = '0 0 70px rgba(192,17,10,0.28)';
     beams.forEach((beam) => {
       const base = beam.classList.contains('b1') ? 16 : -14;
       beam.style.opacity = '';
