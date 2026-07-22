@@ -154,10 +154,18 @@
   .nav-icon-btn:hover { border-color: var(--red); color: var(--red-bright); background: rgba(192,17,10,0.14); }
   .nav-icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
 
+  /* HERO SCROLL TRACK — extra scroll distance that drives the pinned hero animation */
+  .hero-scroll-track {
+    position: relative;
+    height: 230vh;
+  }
+
   /* HERO */
   #hero {
     min-height: 100vh;
-    position: relative;
+    height: 100vh;
+    position: sticky;
+    top: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -187,14 +195,39 @@
     pointer-events: none;
   }
 
+  /* Side panels that close in from off-screen as the hero scroll-track advances */
+  .hero-side-panel {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 17vw;
+    min-width: 90px;
+    max-width: 220px;
+    z-index: 3;
+    pointer-events: none;
+    will-change: transform;
+    background:
+      repeating-linear-gradient(180deg, rgba(192,17,10,0.08) 0 2px, transparent 2px 34px),
+      linear-gradient(180deg, var(--surface2), var(--black));
+    border: 1px solid var(--border);
+  }
+  .hero-side-panel.left {
+    left: 0;
+    clip-path: polygon(0 0, 100% 0, 82% 100%, 0 100%);
+    transform: translateX(-100%);
+  }
+  .hero-side-panel.right {
+    right: 0;
+    clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
+    transform: translateX(100%);
+  }
+
   /* POSTER STAGE — the picture as a poster with the wordmark overlapping
      its top edge, matching the finalbosu.com reference composition */
   .poster-stage {
     position: relative;
     width: min(560px, 90vw);
     margin: 0 auto 1.75rem;
-    transform-style: preserve-3d;
-    will-change: transform;
   }
 
   .poster-wordmark {
@@ -252,7 +285,6 @@
     position: relative;
     z-index: 2;
     max-width: 800px;
-    perspective: 1000px;
     will-change: transform, opacity;
   }
 
@@ -307,36 +339,6 @@
     font-size: 0.8rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* Claw-slash hover sweep — three diagonal streaks race across the
-     button just ahead of the color fill, echoing the claw-mark motif */
-  .hero-actions a::before {
-    content: '';
-    position: absolute;
-    top: -60%;
-    left: -30%;
-    width: 45%;
-    height: 220%;
-    background: linear-gradient(
-      100deg,
-      transparent 0%, transparent 32%,
-      rgba(255,255,255,0.85) 34%, transparent 36%,
-      transparent 46%,
-      rgba(255,255,255,0.65) 48%, transparent 50%,
-      transparent 60%,
-      rgba(255,255,255,0.45) 62%, transparent 64%,
-      transparent 100%
-    );
-    transform: translateX(-220%) rotate(8deg);
-    transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
-    pointer-events: none;
-    z-index: 1;
-  }
-  .hero-actions a:hover::before {
-    transform: translateX(420%) rotate(8deg);
   }
 
   .scroll-indicator {
@@ -775,10 +777,12 @@
     .nav-cta { gap: 0.5rem; margin-left: auto; }
 
     /* HERO */
-    #hero { min-height: 100svh; padding: 5.5rem 1.5rem 5rem; align-items: center; }
+    .hero-scroll-track { height: 200vh; }
+    #hero { min-height: 100svh; height: 100svh; padding: 5.5rem 1.5rem 5rem; align-items: center; }
     .hero-content { width: 100%; max-width: 100%; display: flex; flex-direction: column; align-items: center; }
     .poster-stage { width: min(360px, 88vw); margin-bottom: 1.25rem; }
     .poster-wordmark { top: -10%; }
+    .hero-side-panel { width: 10vw; min-width: 32px; }
     .solana-badge { font-size: 0.65rem; padding: 0.28rem 0.65rem; margin-bottom: 1.5rem; }
     .hero-eyebrow { font-size: 0.65rem; letter-spacing: 0.28em; margin-bottom: 0.85rem; }
     .hero-headline { font-size: clamp(1.75rem, 8.5vw, 2.6rem); line-height: 1.1; margin-bottom: 1.1rem; }
@@ -844,6 +848,9 @@
   @media (prefers-reduced-motion: reduce) {
     .fade-in { opacity: 1; transform: none; transition: none; }
     .poster-image, .claw-img { animation: none; }
+    .hero-scroll-track { height: auto; }
+    #hero { position: relative; }
+    .hero-side-panel { display: none; }
   }
 
   /* FOUNDERS */
@@ -965,42 +972,12 @@
     pointer-events: none;
   }
   @keyframes logo-glitch {
-    0%, 89%, 100% {
-      clip-path: none;
-      transform: translate(0,0);
-      filter: drop-shadow(0 0 28px rgba(192,17,10,0.55));
-    }
-    90% {
-      clip-path: inset(30% 0 50% 0);
-      transform: translate(-4px, 0);
-      filter: drop-shadow(0 0 28px rgba(192,17,10,0.55))
-              drop-shadow(-3px 0 0 rgba(255,40,60,0.75))
-              drop-shadow(3px 0 0 rgba(0,220,255,0.7));
-    }
-    91% {
-      clip-path: inset(10% 0 70% 0);
-      transform: translate(4px, 0);
-      filter: drop-shadow(0 0 28px rgba(192,17,10,0.55))
-              drop-shadow(4px 0 0 rgba(255,40,60,0.75))
-              drop-shadow(-4px 0 0 rgba(0,220,255,0.7));
-    }
-    92% {
-      clip-path: none;
-      transform: translate(0,0);
-      filter: drop-shadow(0 0 28px rgba(192,17,10,0.55));
-    }
-    94% {
-      clip-path: inset(60% 0 20% 0);
-      transform: translate(-3px, 1px);
-      filter: drop-shadow(0 0 28px rgba(192,17,10,0.55))
-              drop-shadow(-3px 0 0 rgba(255,40,60,0.7))
-              drop-shadow(3px 0 0 rgba(0,220,255,0.65));
-    }
-    95% {
-      clip-path: none;
-      transform: translate(0,0);
-      filter: drop-shadow(0 0 28px rgba(192,17,10,0.55));
-    }
+    0%, 89%, 100% { clip-path: none; transform: translate(0,0); filter: drop-shadow(0 0 28px rgba(192,17,10,0.55)); }
+    90% { clip-path: inset(30% 0 50% 0); transform: translate(-4px, 0); filter: drop-shadow(0 0 28px rgba(192,17,10,0.55)); }
+    91% { clip-path: inset(10% 0 70% 0); transform: translate(4px, 0); }
+    92% { clip-path: none; transform: translate(0,0); }
+    94% { clip-path: inset(60% 0 20% 0); transform: translate(-3px, 1px); }
+    95% { clip-path: none; transform: translate(0,0); }
   }
   .poster-image {
     animation: logo-glitch 5s ease-in-out infinite;
@@ -1078,7 +1055,8 @@
   </div>
 </nav>
 
-<!-- HERO -->
+<!-- HERO SCROLL TRACK — this extra height is what the pinned hero animation scrolls through -->
+<div class="hero-scroll-track" id="heroScrollTrack">
 <section id="hero">
   <div class="hero-bg"></div>
   <div class="hero-scratches"></div>
@@ -1093,18 +1071,21 @@
   <div class="glitch-bar"></div>
   <div class="glitch-bar"></div>
   <div class="glitch-bar"></div>
+  <div class="hero-side-panel left" id="heroPanelL"></div>
+  <div class="hero-side-panel right" id="heroPanelR"></div>
   <div class="hero-content" id="heroContent">
     <div class="solana-badge">
       <span class="sol-dot"></span>
       On Solana
     </div>
-    <div class="poster-stage" id="posterStage">
+    <div class="poster-stage">
       <div class="hero-beam b1"></div>
       <div class="hero-beam b2"></div>
-      <img src="primals-hero-crowd.png" alt="PRIMALS crowd outside the show" class="poster-image" id="posterImage" />
+      <div class="poster-wordmark">PRIMALS</div>
+      <img src="primals-hero-crowd.png" alt="PRIMALS crowd outside the show" class="poster-image" />
     </div>
     <p class="hero-eyebrow">A new NFT collection. Coming soon.</p>
-    <h1 class="hero-headline">Not fully apes.<br>Not fully human.<br><span id="scrambleSpan">Something else entirely.</span></h1>
+    <h1 class="hero-headline">Not fully apes.<br>Not fully human.<br><span>Something else entirely.</span></h1>
     <p class="hero-sub">An ancient species awakens. Evolution is not a destination — it is a reckoning.</p>
     <div class="hero-actions">
   <a href="https://discord.gg/ZRrWFfRVez" target="_blank" class="btn-solid">Join Discord</a>
@@ -1113,6 +1094,7 @@
 </div>
   </div>
 </section>
+</div>
 
 <div class="divider"></div>
 
@@ -1322,157 +1304,53 @@ const observer = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
-// Poster stage — combines scroll drift (net downward sink, overtaking
-// the page's own upward scroll) with mouse-follow tilt, composed into
-// a single transform each frame so the two effects don't fight.
-// This now targets .poster-stage (the wrapper) rather than the <img>
-// itself, since the <img> already owns the logo-glitch CSS animation —
-// keeping them on separate elements stops the two transforms from
-// overwriting one another.
+// Scroll-pinned hero animation — content scales/lifts and the side panels
+// close in as the hero-scroll-track is scrolled through, then releases
+// naturally into the rest of the page once the track ends.
 (function() {
-  const stage = document.getElementById('posterStage');
-  if (!stage) return;
+  const track = document.getElementById('heroScrollTrack');
+  const heroContent = document.getElementById('heroContent');
+  const panelL = document.getElementById('heroPanelL');
+  const panelR = document.getElementById('heroPanelR');
+  if (!track || !heroContent) return;
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
   if (reduceMotion) return;
 
-  const scrollSpeed = 1.4; // >1 = sinks down; <1 = lags upward; =1 = stays put
-  const tiltMax = 7;       // degrees of max tilt on each axis
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
 
-  let scrollOffset = 0;
-  let targetTiltX = 0, targetTiltY = 0;
-  let curTiltX = 0, curTiltY = 0;
   let ticking = false;
 
-  function composeTransform() {
-    stage.style.transform =
-      `translateY(${scrollOffset}px) rotateX(${curTiltX}deg) rotateY(${curTiltY}deg)`;
+  function update() {
+    ticking = false;
+    const rect = track.getBoundingClientRect();
+    const total = track.offsetHeight - window.innerHeight;
+    const scrolled = clamp(-rect.top, 0, total);
+    const p = total > 0 ? scrolled / total : 0;
+    // ease in-out
+    const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+
+    const scale = lerp(1, 0.8, e);
+    const translateY = lerp(0, -6, e);
+    heroContent.style.transform = `translateY(${translateY}vh) scale(${scale})`;
+    heroContent.style.opacity = String(lerp(1, 0.35, clamp((e - 0.55) / 0.45, 0, 1)));
+
+    const panelShift = lerp(0, 1, e);
+    panelL.style.transform = `translateX(${lerp(-100, 0, panelShift)}%)`;
+    panelR.style.transform = `translateX(${lerp(100, 0, panelShift)}%)`;
   }
 
   function onScroll() {
     if (!ticking) {
-      window.requestAnimationFrame(() => {
-        scrollOffset = window.scrollY * scrollSpeed;
-        composeTransform();
-        ticking = false;
-      });
+      window.requestAnimationFrame(update);
       ticking = true;
     }
   }
 
-  function onMouseMove(e) {
-    const rect = stage.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = (e.clientX - cx) / (rect.width / 2);
-    const dy = (e.clientY - cy) / (rect.height / 2);
-    targetTiltY = Math.max(-1, Math.min(1, dx)) * tiltMax;
-    targetTiltX = Math.max(-1, Math.min(1, -dy)) * tiltMax;
-  }
-
-  function onMouseLeave() {
-    targetTiltX = 0;
-    targetTiltY = 0;
-  }
-
-  function tiltLoop() {
-    curTiltX += (targetTiltX - curTiltX) * 0.1;
-    curTiltY += (targetTiltY - curTiltY) * 0.1;
-    composeTransform();
-    requestAnimationFrame(tiltLoop);
-  }
-
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
-
-  if (!isCoarsePointer) {
-    document.getElementById('hero').addEventListener('mousemove', onMouseMove);
-    document.getElementById('hero').addEventListener('mouseleave', onMouseLeave);
-    requestAnimationFrame(tiltLoop);
-  }
-
-  onScroll();
-})();
-
-// Scramble-decode headline — the final line resolves out of random
-// glyphs on load, echoing the "something dormant stirring" lore.
-(function() {
-  const el = document.getElementById('scrambleSpan');
-  if (!el) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-  const finalText = el.textContent;
-  const glyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&$*+=-/\\<>';
-  const durationFrames = 28;
-  let frame = 0;
-
-  function tick() {
-    let out = '';
-    for (let i = 0; i < finalText.length; i++) {
-      const ch = finalText[i];
-      if (ch === ' ') { out += ' '; continue; }
-      const revealAt = (i / finalText.length) * durationFrames;
-      if (frame >= revealAt + 6) {
-        out += ch;
-      } else {
-        out += glyphs[Math.floor(Math.random() * glyphs.length)];
-      }
-    }
-    el.textContent = out;
-    frame++;
-    if (frame <= durationFrames + 8) {
-      requestAnimationFrame(tick);
-    } else {
-      el.textContent = finalText;
-    }
-  }
-
-  requestAnimationFrame(tick);
-})();
-
-// Scroll-reactive intensity — hero particles and glitch bars brighten
-// briefly in proportion to how fast the user is scrolling, then decay
-// back to baseline, so the hero feels responsive rather than looping
-// on a fixed timer regardless of what the visitor is doing.
-(function() {
-  const hero = document.getElementById('hero');
-  const particles = document.getElementById('hero-particles');
-  const heroBg = hero ? hero.querySelector('.hero-bg') : null;
-  if (!hero) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-  let lastY = window.scrollY;
-  let lastT = performance.now();
-  let intensity = 0;
-
-  function onScroll() {
-    const now = performance.now();
-    const dt = Math.max(now - lastT, 1);
-    const dy = window.scrollY - lastY;
-    const velocity = Math.abs(dy) / dt; // px per ms
-    intensity = Math.min(1, intensity + velocity * 4);
-    lastY = window.scrollY;
-    lastT = now;
-  }
-
-  function decayLoop() {
-    intensity *= 0.92;
-    if (intensity < 0.002) intensity = 0;
-
-    if (particles) {
-      particles.style.filter = `brightness(${1 + intensity * 1.6}) saturate(${1 + intensity})`;
-    }
-    if (heroBg) {
-      heroBg.style.transform = `scale(${1 + intensity * 0.08})`;
-      heroBg.style.opacity = String(1 - intensity * 0.15);
-    }
-
-    requestAnimationFrame(decayLoop);
-  }
-
-  window.addEventListener('scroll', onScroll, { passive: true });
-  requestAnimationFrame(decayLoop);
+  update();
 })();
 </script>
 
